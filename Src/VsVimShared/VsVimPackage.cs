@@ -215,6 +215,64 @@ namespace Vim.VisualStudio
             return VSConstants.S_OK;
         }
 
+        /// <summary>
+        /// Show the VsVim paste history menu at the caret of the active vim buffer.  The
+        /// menu displays the values of recent yank / delete operations and pastes the
+        /// chosen one at the caret
+        /// </summary>
+        private int ShowPasteHistory()
+        {
+            if (!_vsAdapter.TryGetActiveTextView(out IWpfTextView textView))
+            {
+                PrintToCommandWindow("Could not detect an active text view");
+                return VSConstants.E_FAIL;
+            }
+
+            if (!_vim.TryGetVimBuffer(textView, out IVimBuffer vimBuffer))
+            {
+                PrintToCommandWindow("Active view isn't a vim buffer");
+                return VSConstants.E_FAIL;
+            }
+
+            var vsVimHost = _exportProvider.GetExportedValue<VsVimHost>();
+            var history = vsVimHost.RegisterHistory;
+            if (history.Count == 0)
+            {
+                vimBuffer.VimBufferData.StatusUtil.OnStatus("VsVim paste history is empty");
+                return VSConstants.S_OK;
+            }
+
+            var entries = history.Select(x => x.StringValue).ToList();
+            PasteHistoryMenu.Show(
+                textView,
+                entries,
+                index => PasteHistoryEntry(vimBuffer, history[index]));
+            return VSConstants.S_OK;
+        }
+
+        /// <summary>
+        /// Paste the chosen history entry into the buffer.  Character wise values are
+        /// inserted at the caret while line wise values are inserted as complete lines
+        /// above the caret line, matching the behavior of a vim 'P' style put
+        /// </summary>
+        private void PasteHistoryEntry(IVimBuffer vimBuffer, RegisterValue value)
+        {
+            try
+            {
+                var commonOperationsFactory = _exportProvider.GetExportedValue<ICommonOperationsFactory>();
+                var commonOperations = commonOperationsFactory.GetCommonOperations(vimBuffer.VimBufferData);
+                var caretPoint = vimBuffer.TextView.Caret.Position.BufferPosition;
+                var point = value.OperationKind.IsLineWise
+                    ? caretPoint.GetContainingLine().Start
+                    : caretPoint;
+                commonOperations.Put(point, value.StringData, value.OperationKind);
+            }
+            catch (Exception ex)
+            {
+                Debug.Fail(ex.Message);
+            }
+        }
+
         private string GetStringArgument(IntPtr variantIn)
         {
             if (variantIn == IntPtr.Zero)
@@ -280,6 +338,9 @@ namespace Vim.VisualStudio
                 case CommandIds.SetMode:
                     hr = SetMode(variantIn, variantOut, commandExecOpt);
                     break;
+                case CommandIds.PasteHistory:
+                    hr = ShowPasteHistory();
+                    break;
                 default:
                     Debug.Assert(false);
                     break;
@@ -296,6 +357,7 @@ namespace Vim.VisualStudio
                 {
                     case CommandIds.Options:
                     case CommandIds.DumpKeyboard:
+                    case CommandIds.PasteHistory:
                         commands[0].cmdf = (uint)(OLECMDF.OLECMDF_ENABLED | OLECMDF.OLECMDF_SUPPORTED);
                         break;
                     default:

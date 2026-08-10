@@ -17,6 +17,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)IDirectoryUtil.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IKeyUtil.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)IMarkDisplayUtil.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)PasteHistoryMenu.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Implementation\BlockCaret\BlockCaret.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Implementation\BlockCaret\BlockCaretController.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Implementation\BlockCaret\BlockCaretFactoryService.cs" />

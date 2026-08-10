@@ -291,6 +291,21 @@ namespace Vim.VisualStudio
         private IVim _vim;
         private FindEvents _findEvents;
         private DateTime _lastNavigationCommandTimeUtc = DateTime.MinValue;
+        private readonly List<RegisterValue> _registerHistory = new List<RegisterValue>();
+
+        /// <summary>
+        /// Maximum number of yank / delete values kept in the paste history which backs
+        /// the 'VsVim.PasteHistory' command
+        /// </summary>
+        internal const int RegisterHistoryLimit = 20;
+
+        /// <summary>
+        /// The values of recent yank / delete style register updates, most recent first
+        /// </summary>
+        internal IReadOnlyList<RegisterValue> RegisterHistory
+        {
+            get { return _registerHistory; }
+        }
 
         internal _DTE DTE
         {
@@ -788,18 +803,21 @@ namespace Vim.VisualStudio
         }
 
         /// <summary>
-        /// Mirror the value of a yank / delete style register update onto the Windows
-        /// clipboard so it shows up in the Visual Studio clipboard ring (Ctrl+Shift+V)
+        /// Record the value of a yank / delete style register update in the paste
+        /// history and mirror it onto the Windows clipboard so it shows up in the
+        /// Visual Studio clipboard ring (Ctrl+Shift+V)
         /// </summary>
         public override void RegisterUpdated(RegisterName registerName, RegisterValue value, RegisterOperation operation)
         {
-            if (!_vimApplicationSettings.UseClipboardRing)
+            var text = value.StringValue;
+            if (string.IsNullOrEmpty(text))
             {
                 return;
             }
 
-            var text = value.StringValue;
-            if (string.IsNullOrEmpty(text))
+            RecordRegisterHistory(value);
+
+            if (!_vimApplicationSettings.UseClipboardRing)
             {
                 return;
             }
@@ -826,6 +844,20 @@ namespace Vim.VisualStudio
             {
                 // The clipboard is a shared resource and access can fail sporadically.
                 // Updating the clipboard ring is a best effort operation
+            }
+        }
+
+        /// <summary>
+        /// Record the value in the paste history.  The most recent value is first and
+        /// duplicates are moved to the front instead of being stored twice
+        /// </summary>
+        private void RecordRegisterHistory(RegisterValue value)
+        {
+            _registerHistory.RemoveAll(x => x.StringValue == value.StringValue);
+            _registerHistory.Insert(0, value);
+            if (_registerHistory.Count > RegisterHistoryLimit)
+            {
+                _registerHistory.RemoveAt(_registerHistory.Count - 1);
             }
         }
 
