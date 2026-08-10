@@ -54,6 +54,7 @@ namespace Vim.VisualStudio
             private const string UseEditorCommandMarginName = "vsvim_useeditorcommandmargin";
             private const string CleanMacrosName = "vsvim_cleanmacros";
             private const string HideMarksName = "vsvim_hidemarks";
+            private const string PasteHistoryYanksOnlyName = "vsvim_pastehistoryyanksonly";
 
             private readonly IVimApplicationSettings _vimApplicationSettings;
 
@@ -71,6 +72,7 @@ namespace Vim.VisualStudio
                 globalSettings.AddCustomSetting(UseEditorCommandMarginName, UseEditorCommandMarginName, settingsSource);
                 globalSettings.AddCustomSetting(CleanMacrosName, CleanMacrosName, settingsSource);
                 globalSettings.AddCustomSetting(HideMarksName, HideMarksName, settingsSource);
+                globalSettings.AddCustomSetting(PasteHistoryYanksOnlyName, PasteHistoryYanksOnlyName, settingsSource);
             }
 
             SettingValue IVimCustomSettingSource.GetDefaultSettingValue(string name)
@@ -82,6 +84,7 @@ namespace Vim.VisualStudio
                     case UseEditorTabAndBackspaceName:
                     case UseEditorCommandMarginName:
                     case CleanMacrosName:
+                    case PasteHistoryYanksOnlyName:
                         return SettingValue.NewToggle(false);
                     case HideMarksName:
                         return SettingValue.NewString("");
@@ -105,6 +108,8 @@ namespace Vim.VisualStudio
                         return SettingValue.NewToggle(_vimApplicationSettings.UseEditorCommandMargin);
                     case CleanMacrosName:
                         return SettingValue.NewToggle(_vimApplicationSettings.CleanMacros);
+                    case PasteHistoryYanksOnlyName:
+                        return SettingValue.NewToggle(_vimApplicationSettings.PasteHistoryYanksOnly);
                     case HideMarksName:
                         return SettingValue.NewString(_vimApplicationSettings.HideMarks);
                     default:
@@ -153,6 +158,9 @@ namespace Vim.VisualStudio
                         break;
                     case CleanMacrosName:
                         setBool(v => _vimApplicationSettings.CleanMacros = v);
+                        break;
+                    case PasteHistoryYanksOnlyName:
+                        setBool(v => _vimApplicationSettings.PasteHistoryYanksOnly = v);
                         break;
                     case HideMarksName:
                         setString(v => _vimApplicationSettings.HideMarks = v);
@@ -797,6 +805,11 @@ namespace Vim.VisualStudio
         {
             var text = value.StringValue;
             if (string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+
+            if (_vimApplicationSettings.PasteHistoryYanksOnly && !operation.IsYank)
             {
                 return;
             }
