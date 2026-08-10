@@ -85,6 +85,12 @@ namespace Vim.VisualStudio
         bool CleanMacros { get; set; }
 
         /// <summary>
+        /// When set only yank operations add entries to the paste history which backs the
+        /// 'VsVim.PasteHistory' command.  By default deletes add entries as well
+        /// </summary>
+        bool PasteHistoryYanksOnly { get; set; }
+
+        /// <summary>
         /// Controls how vimrc files are loaded
         /// </summary>
         VimRcLoadSetting VimRcLoadSetting { get; set; }

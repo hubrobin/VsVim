@@ -479,6 +479,14 @@ namespace Vim.VisualStudio.UnitTest
                     RegisterOperation.Yank);
             }
 
+            private void RecordDelete(string text)
+            {
+                _hostRaw.RegisterUpdated(
+                    RegisterName.Unnamed,
+                    new RegisterValue(text, OperationKind.CharacterWise),
+                    RegisterOperation.Delete);
+            }
+
             [WpfFact]
             public void MostRecentFirst()
             {
@@ -508,6 +516,36 @@ namespace Vim.VisualStudio.UnitTest
                 Create();
                 RecordYank("");
                 Assert.Equal(0, _hostRaw.RegisterHistory.Count);
+            }
+
+            /// <summary>
+            /// By default both yanks and deletes are recorded
+            /// </summary>
+            [WpfFact]
+            public void DeletesRecordedByDefault()
+            {
+                Create();
+                RecordYank("cat");
+                RecordDelete("dog");
+                Assert.Equal(new[] { "dog", "cat" }, _hostRaw.RegisterHistory.Select(x => x.StringValue));
+            }
+
+            /// <summary>
+            /// When 'vsvim_pastehistoryyanksonly' is set delete operations should not
+            /// be recorded in the history
+            /// </summary>
+            [WpfFact]
+            public void YanksOnlySkipsDeletes()
+            {
+                Create();
+                _vimApplicationSettings.SetupGet(x => x.PasteHistoryYanksOnly).Returns(true);
+                RecordYank("cat");
+                RecordDelete("dog");
+                _hostRaw.RegisterUpdated(
+                    RegisterName.Unnamed,
+                    new RegisterValue("fish", OperationKind.CharacterWise),
+                    RegisterOperation.BigDelete);
+                Assert.Equal(new[] { "cat" }, _hostRaw.RegisterHistory.Select(x => x.StringValue));
             }
 
             [WpfFact]

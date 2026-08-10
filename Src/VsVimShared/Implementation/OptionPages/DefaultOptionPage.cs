@@ -261,6 +261,11 @@ namespace Vim.VisualStudio.Implementation.OptionPages
         [Category(CategoryEditing)]
         public bool ReportClipboardErrors { get; set; }
 
+        [DisplayName("Paste History Yanks Only")]
+        [Description("Only yank commands (not deletes) add entries to the VsVim paste history")]
+        [Category(CategoryEditing)]
+        public bool PasteHistoryYanksOnly { get; set; }
+
         [DisplayName("VimRc File Loading")]
         [Description("Controls how VsVim probes for vsvimrc / vimrc files")]
         [Category(CategoryGeneral)]
@@ -401,6 +406,7 @@ namespace Vim.VisualStudio.Implementation.OptionPages
                 UseEditorCommandMargin = vimApplicationSettings.UseEditorCommandMargin;
                 CleanMacros = vimApplicationSettings.CleanMacros;
                 ReportClipboardErrors = vimApplicationSettings.ReportClipboardErrors;
+                PasteHistoryYanksOnly = vimApplicationSettings.PasteHistoryYanksOnly;
                 VimRcLoadSetting = vimApplicationSettings.VimRcLoadSetting;
                 DisplayControlCharacters = vimApplicationSettings.DisplayControlChars;
                 DisplayVimRcLoadErrors = !vimApplicationSettings.HaveNotifiedVimRcErrors;
@@ -433,6 +439,7 @@ namespace Vim.VisualStudio.Implementation.OptionPages
                 vimApplicationSettings.UseEditorCommandMargin = UseEditorCommandMargin;
                 vimApplicationSettings.CleanMacros = CleanMacros;
                 vimApplicationSettings.ReportClipboardErrors = ReportClipboardErrors;
+                vimApplicationSettings.PasteHistoryYanksOnly = PasteHistoryYanksOnly;
                 vimApplicationSettings.VimRcLoadSetting = VimRcLoadSetting;
                 vimApplicationSettings.DisplayControlChars = DisplayControlCharacters;
                 vimApplicationSettings.HaveNotifiedVimRcErrors = !DisplayVimRcLoadErrors;
