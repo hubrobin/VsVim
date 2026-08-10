@@ -14,5 +14,6 @@ namespace Vim.VisualStudio
         internal const uint SetEnabled = 0x104;
         internal const uint SetDisabled = 0x105;
         internal const uint SetMode = 0x106;
+        internal const uint PasteHistory = 0x107;
     };
 }

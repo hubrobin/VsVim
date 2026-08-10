@@ -468,5 +468,60 @@ namespace Vim.VisualStudio.UnitTest
                 }
             }
         }
+
+        public sealed class RegisterHistoryTest : VsVimHostTest
+        {
+            private void RecordYank(string text)
+            {
+                _hostRaw.RegisterUpdated(
+                    RegisterName.Unnamed,
+                    new RegisterValue(text, OperationKind.CharacterWise),
+                    RegisterOperation.Yank);
+            }
+
+            [WpfFact]
+            public void MostRecentFirst()
+            {
+                Create();
+                RecordYank("cat");
+                RecordYank("dog");
+                Assert.Equal(new[] { "dog", "cat" }, _hostRaw.RegisterHistory.Select(x => x.StringValue));
+            }
+
+            /// <summary>
+            /// Yanking a value which is already in the history should move it to the
+            /// front instead of storing it twice
+            /// </summary>
+            [WpfFact]
+            public void DuplicatesMoveToFront()
+            {
+                Create();
+                RecordYank("cat");
+                RecordYank("dog");
+                RecordYank("cat");
+                Assert.Equal(new[] { "cat", "dog" }, _hostRaw.RegisterHistory.Select(x => x.StringValue));
+            }
+
+            [WpfFact]
+            public void EmptyValuesAreNotRecorded()
+            {
+                Create();
+                RecordYank("");
+                Assert.Equal(0, _hostRaw.RegisterHistory.Count);
+            }
+
+            [WpfFact]
+            public void HistoryIsCapped()
+            {
+                Create();
+                for (var i = 0; i < VsVimHost.RegisterHistoryLimit + 5; i++)
+                {
+                    RecordYank("value" + i);
+                }
+
+                Assert.Equal(VsVimHost.RegisterHistoryLimit, _hostRaw.RegisterHistory.Count);
+                Assert.Equal("value" + (VsVimHost.RegisterHistoryLimit + 4), _hostRaw.RegisterHistory[0].StringValue);
+            }
+        }
     }
 }
