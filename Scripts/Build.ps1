@@ -10,6 +10,7 @@ param (
   # Settings
   [switch]$ci = $false,
   [string]$config = "Debug",
+  [string]$vsTarget = "",
 
   [parameter(ValueFromRemainingArguments=$true)][string[]]$properties)
 
@@ -25,6 +26,15 @@ $ErrorActionPreference="Stop"
 [string]$toolsDir = Join-Path $rootDir "Tools"
 [string[]]$vsVersions = @("2019", "2022")
 
+# When -vsTarget is specified only build / package that version of the extension.
+# Note that the 2022 extension also installs on Visual Studio 2026
+if ($vsTarget -ne "") {
+  if ($vsVersions -notcontains $vsTarget) {
+    throw "Invalid -vsTarget value '$vsTarget'. Valid values: $vsVersions"
+  }
+  $vsVersions = @($vsTarget)
+}
+
 function Print-Usage() {
   Write-Host "Actions:"
   Write-Host "  -build                    Build VsVim"
@@ -37,6 +47,9 @@ function Print-Usage() {
   Write-Host "Settings:"
   Write-Host "  -ci                       True when running in CI"
   Write-Host "  -config <value>           Build configuration: 'Debug' or 'Release'"
+  Write-Host "  -vsTarget <value>         Only build the extension for this Visual Studio"
+  Write-Host "                            version: '2019' or '2022' (2022 also covers 2026)."
+  Write-Host "                            Only applies to -build; use a full build for -test"
 }
 
 # Toggle between human readable messages and Azure Pipelines messages based on 
@@ -270,7 +283,20 @@ function Build-Solution(){
 
   Write-Host "Building VsVim"
   $binlogFilePath = Join-Path $logsDir "msbuild.binlog"
-  $args = "/nologo /restore /v:m /m /bl:$binlogFilePath /p:Configuration=$config VsVim.sln"
+  $buildTarget = "VsVim.sln"
+  if ($vsTarget -ne "") {
+    # Only build the extension project (and its dependencies) for the requested
+    # Visual Studio version instead of the whole solution
+    $buildTarget = Join-Path "Src" (Join-Path "VsVim$vsTarget" "VsVim$vsTarget.csproj")
+
+    # CleanVsix is used below to rebuild the VSIX but is not a dependency of the
+    # extension project so build it explicitly
+    $cleanVsixProject = Join-Path "Src" (Join-Path "CleanVsix" "CleanVsix.csproj")
+    $cleanVsixArgs = "/nologo /restore /v:m /m /p:Configuration=$config $cleanVsixProject"
+    Exec-Console $msbuild $cleanVsixArgs
+  }
+
+  $args = "/nologo /restore /v:m /m /bl:$binlogFilePath /p:Configuration=$config $buildTarget"
 
   if ($ci) {
     $args += " /p:DeployExtension=false"
