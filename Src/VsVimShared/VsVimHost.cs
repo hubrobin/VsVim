@@ -255,6 +255,14 @@ namespace Vim.VisualStudio
         /// </summary>
         internal const string LineCutCopyClipboardFormat = "VisualStudioEditorOperationsLineCutCopyClipboardTag";
 
+        /// <summary>
+        /// The window of time after a navigation command (e.g. "Go To Definition") in
+        /// which an external selection change is considered a side effect of the
+        /// navigation.  Navigation in Visual Studio is often asynchronous so the
+        /// selection frequently occurs well after the command itself completes
+        /// </summary>
+        private static readonly TimeSpan s_unwantedSelectionWindow = TimeSpan.FromSeconds(4);
+
 #if VS_SPECIFIC_2019
         internal const VisualStudioVersion VisualStudioVersion = global::Vim.VisualStudio.VisualStudioVersion.Vs2019;
 #elif VS_SPECIFIC_2022
@@ -282,6 +290,7 @@ namespace Vim.VisualStudio
 
         private IVim _vim;
         private FindEvents _findEvents;
+        private DateTime _lastNavigationCommandTimeUtc = DateTime.MinValue;
 
         internal _DTE DTE
         {
@@ -559,12 +568,39 @@ namespace Vim.VisualStudio
 
         public override bool GoToDefinition()
         {
+            NotifyNavigationCommand();
             return SafeExecuteCommand(_textManager.ActiveTextViewOptional, CommandNameGoToDefinition);
         }
 
         public override bool PeekDefinition()
         {
+            NotifyNavigationCommand();
             return SafeExecuteCommand(_textManager.ActiveTextViewOptional, CommandNamePeekDefinition);
+        }
+
+        /// <summary>
+        /// Record that a navigation style command (e.g. "Go To Definition") was just
+        /// initiated.  Navigation in Visual Studio is often asynchronous so the
+        /// selection of the navigation target can occur well after the command itself
+        /// completes.  Any external selection which occurs within this window is
+        /// considered a side effect of the navigation
+        /// </summary>
+        internal void NotifyNavigationCommand()
+        {
+            _lastNavigationCommandTimeUtc = DateTime.UtcNow;
+        }
+
+        /// <summary>
+        /// Navigation commands like "Go To Definition" select the target symbol when
+        /// they complete.  Vim does not select the navigation target and leaving the
+        /// selection in place would cause a switch into visual mode.  Label selections
+        /// which occur shortly after a navigation command as unwanted so they get
+        /// cleared instead
+        /// </summary>
+        public override bool IsUnwantedExternalSelection(ITextView textView)
+        {
+            var sinceNavigation = DateTime.UtcNow - _lastNavigationCommandTimeUtc;
+            return sinceNavigation >= TimeSpan.Zero && sinceNavigation <= s_unwantedSelectionWindow;
         }
 
         /// <summary>
@@ -1454,6 +1490,8 @@ namespace Vim.VisualStudio
 
         private bool GoToDeclaration(ITextView textView, string target)
         {
+            NotifyNavigationCommand();
+
             // The 'Edit.GoToDeclaration' is not widely implemented (for
             // example, C# does not implement it), and so we use
             // 'Edit.GoToDefinition' unless we are sure the language service

@@ -735,6 +735,11 @@ namespace Vim.Mac
         {
         }
 
+        public bool IsUnwantedExternalSelection(ITextView textView)
+        {
+            return false;
+        }
+
         public void VimCreated(IVim vim)
         {
             _vim = vim;

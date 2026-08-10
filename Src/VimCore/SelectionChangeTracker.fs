@@ -196,11 +196,23 @@ type internal SelectionChangeTracker
             elif not _vimBuffer.IsClosed && not _selectionDirty then
                 match getDesiredNewMode() with
                 | None -> ()
-                | Some modeKind -> 
-                    // Switching from an insert mode to a visual/select mode automatically initiates one command mode
-                    if VisualKind.IsAnyVisualOrSelect modeKind && VimExtensions.IsAnyInsert _vimBuffer.ModeKind then
-                        _vimBuffer.VimTextBuffer.InOneTimeCommand <- Some _vimBuffer.ModeKind
-                    _vimBuffer.SwitchMode modeKind ModeArgument.None |> ignore
+                | Some modeKind ->
+                    if
+                        VisualKind.IsAnyVisualOrSelect modeKind
+                        && not (VisualKind.IsAnyVisualOrSelect _vimBuffer.ModeKind)
+                        && not _mouseDevice.IsLeftButtonPressed
+                        && not (TextViewUtil.IsSelectionEmpty _textView)
+                        && _vimHost.IsUnwantedExternalSelection _textView
+                    then
+                        // The host has labeled this external selection as an unwanted
+                        // side effect of a host operation such as "Go To Definition".
+                        // Clear the selection and stay in the current mode
+                        x.SyncSelection (fun () -> x.ClearExternalSelection())
+                    else
+                        // Switching from an insert mode to a visual/select mode automatically initiates one command mode
+                        if VisualKind.IsAnyVisualOrSelect modeKind && VimExtensions.IsAnyInsert _vimBuffer.ModeKind then
+                            _vimBuffer.VimTextBuffer.InOneTimeCommand <- Some _vimBuffer.ModeKind
+                        _vimBuffer.SwitchMode modeKind ModeArgument.None |> ignore
 
         match getDesiredNewMode() with
         | None ->
@@ -250,6 +262,14 @@ type internal SelectionChangeTracker
                 SelectionSpan(mousePoint, anchorPoint, activePoint)
                 |> TextViewUtil.SelectSpan _textView
             | _ -> ()
+
+    /// Clear an unwanted external selection, moving the caret to the start of what
+    /// was selected, e.g. the start of the symbol that "Go To Definition" navigated to
+    member x.ClearExternalSelection() =
+        Contract.Assert _syncingSelection
+
+        let startPoint = _textView.Selection.Start
+        TextViewUtil.MoveCaretToVirtualPointRaw _textView startPoint MoveCaretFlags.ClearSelection
 
     /// When an non-empty external selection occurs with an inclusive selection,
     /// move the caret back one position.

@@ -59,6 +59,14 @@ namespace Vim.VisualStudio.Implementation.NavigateTo
             {
                 _inSearch = false;
                 _unwantedSelectionHandler.PostAction();
+
+                // Navigation to the chosen item is frequently asynchronous and the
+                // selection of the target can occur well after 'PostAction' has run.
+                // Let the host know so those late selections get cleared as well
+                if (_vim.VimHost is VsVimHost vsVimHost)
+                {
+                    vsVimHost.NotifyNavigationCommand();
+                }
             }
         }
 

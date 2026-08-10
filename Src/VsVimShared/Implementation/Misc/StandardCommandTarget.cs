@@ -323,6 +323,15 @@ namespace Vim.VisualStudio.Implementation.Misc
                     // The GoToDefinition command will often cause a selection
                     // to occur in the  buffer.
                     {
+                        // Navigation is frequently asynchronous and the selection of the
+                        // target symbol can occur well after the command completes and
+                        // 'PostAction' has run.  Let the host know so those late
+                        // selections get cleared as well
+                        if (_vimBuffer.Vim.VimHost is VsVimHost vsVimHost)
+                        {
+                            vsVimHost.NotifyNavigationCommand();
+                        }
+
                         var handler = new UnwantedSelectionHandler(_vimBuffer.Vim);
                         preAction = handler.PreAction;
                         postAction = handler.PostAction;

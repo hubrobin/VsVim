@@ -503,6 +503,15 @@ namespace Vim.UI.Wpf
         {
         }
 
+        /// <summary>
+        /// Whether an external selection is an unwanted side effect of a host command
+        /// is a host specific decision.  By default no selection is unwanted
+        /// </summary>
+        public virtual bool IsUnwantedExternalSelection(ITextView textView)
+        {
+            return false;
+        }
+
         protected void RaiseIsVisibleChanged(ITextView textView)
         {
             if (_isVisibleChanged != null)
@@ -912,6 +921,11 @@ namespace Vim.UI.Wpf
         void IVimHost.RegisterUpdated(RegisterName registerName, RegisterValue value, RegisterOperation operation)
         {
             RegisterUpdated(registerName, value, operation);
+        }
+
+        bool IVimHost.IsUnwantedExternalSelection(ITextView textView)
+        {
+            return IsUnwantedExternalSelection(textView);
         }
 
         event EventHandler<TextViewEventArgs> IVimHost.IsVisibleChanged

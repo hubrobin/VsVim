@@ -5288,6 +5288,13 @@ type IVimHost =
     /// storage such as the Visual Studio clipboard ring
     abstract RegisterUpdated: registerName: RegisterName -> value: RegisterValue -> operation: RegisterOperation -> unit
 
+    /// Called when an external (host initiated) selection change would cause the
+    /// IVimBuffer to switch into a visual mode.  Returning true here indicates the
+    /// selection is an unwanted side effect of a host operation (such as the selection
+    /// of the target symbol which "Go To Definition" produces) and should be cleared
+    /// instead of causing a switch into visual mode
+    abstract IsUnwantedExternalSelection: textView: ITextView -> bool
+
     /// Raised when the visibility of an ITextView changes
     [<CLIEvent>]
     abstract IsVisibleChanged: IDelegateEvent<System.EventHandler<TextViewEventArgs>>
