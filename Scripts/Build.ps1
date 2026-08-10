@@ -292,11 +292,13 @@ function Build-Solution(){
     # CleanVsix is used below to rebuild the VSIX but is not a dependency of the
     # extension project so build it explicitly
     $cleanVsixProject = Join-Path "Src" (Join-Path "CleanVsix" "CleanVsix.csproj")
-    $cleanVsixArgs = "/nologo /restore /v:m /m /p:Configuration=$config $cleanVsixProject"
+    $cleanVsixArgs = "/nologo /restore /v:m /nr:false /p:Configuration=$config $cleanVsixProject"
     Exec-Console $msbuild $cleanVsixArgs
   }
 
-  $args = "/nologo /restore /v:m /m /bl:$binlogFilePath /p:Configuration=$config $buildTarget"
+  # /nr:false (nodeReuse) makes the MSBuild worker processes spawned by /m exit when
+  # the build completes instead of lingering for ~15 minutes waiting to be reused
+  $args = "/nologo /restore /v:m /m /nr:false /bl:$binlogFilePath /p:Configuration=$config $buildTarget"
 
   if ($ci) {
     $args += " /p:DeployExtension=false"
