@@ -63,7 +63,7 @@ namespace Vim.UI.Wpf
         }
 
         /// <summary>
-        /// Get the single character access key used to quickly select the entry at the
+        /// Get the single character displayed to quickly select the entry at the
         /// specified index, or null when the index is beyond the quick select range
         /// </summary>
         internal static string GetAccessKey(int index)
@@ -81,6 +81,31 @@ namespace Vim.UI.Wpf
             return null;
         }
 
+        /// <summary>
+        /// Map a pressed key to the index of the entry it selects, or -1 when the key
+        /// is not an entry selection key.  The keys 1-9 select the first nine entries
+        /// and 0 selects the tenth
+        /// </summary>
+        internal static int GetEntryIndex(Key key)
+        {
+            if (key >= Key.D1 && key <= Key.D9)
+            {
+                return key - Key.D1;
+            }
+
+            if (key >= Key.NumPad1 && key <= Key.NumPad9)
+            {
+                return key - Key.NumPad1;
+            }
+
+            if (key == Key.D0 || key == Key.NumPad0)
+            {
+                return 9;
+            }
+
+            return -1;
+        }
+
         private static SolidColorBrush CreateBrush(Color color)
         {
             var brush = new SolidColorBrush(color);
@@ -89,9 +114,48 @@ namespace Vim.UI.Wpf
         }
 
         /// <summary>
-        /// Create the style used for the menu items.  The default WPF MenuItem control
-        /// template hard codes its highlight visuals so a simple replacement template
-        /// is used to ensure the themed highlight colors are rendered
+        /// An explicit style for the text blocks used in the menu.  Setting an explicit
+        /// style prevents any implicit host styles (e.g. themed Visual Studio text
+        /// styles) from applying to them
+        /// </summary>
+        private static Style CreateTextBlockStyle()
+        {
+            var style = new Style(typeof(TextBlock));
+            style.Setters.Add(new Setter(TextBlock.BackgroundProperty, Brushes.Transparent));
+            return style;
+        }
+
+        /// <summary>
+        /// Create the header element for an entry: the quick select number followed by
+        /// the preview text.  Explicit elements are used instead of a header string so
+        /// no host specific header formatting (access key rendering, icon columns,
+        /// etc ...) is involved
+        /// </summary>
+        private static object CreateHeader(string accessKey, string preview, Style textBlockStyle)
+        {
+            var panel = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Background = Brushes.Transparent,
+            };
+            panel.Children.Add(new TextBlock
+            {
+                Style = textBlockStyle,
+                Text = accessKey ?? string.Empty,
+                MinWidth = 20,
+            });
+            panel.Children.Add(new TextBlock
+            {
+                Style = textBlockStyle,
+                Text = preview,
+            });
+            return panel;
+        }
+
+        /// <summary>
+        /// Create the style used for the menu items.  The item template is replaced
+        /// wholesale (and the default style suppressed) so no host theming such as
+        /// icon columns or hard coded highlight visuals can appear
         /// </summary>
         private static Style CreateMenuItemStyle(PasteHistoryMenuColors colors)
         {
@@ -101,12 +165,11 @@ namespace Vim.UI.Wpf
 
             var borderFactory = new FrameworkElementFactory(typeof(Border), "Bd");
             borderFactory.SetValue(Border.BackgroundProperty, Brushes.Transparent);
-            borderFactory.SetValue(Border.PaddingProperty, new Thickness(24, 4, 24, 4));
+            borderFactory.SetValue(Border.PaddingProperty, new Thickness(12, 4, 24, 4));
             borderFactory.SetValue(Border.SnapsToDevicePixelsProperty, true);
 
             var contentFactory = new FrameworkElementFactory(typeof(ContentPresenter));
             contentFactory.SetValue(ContentPresenter.ContentSourceProperty, "Header");
-            contentFactory.SetValue(ContentPresenter.RecognizesAccessKeyProperty, true);
             borderFactory.AppendChild(contentFactory);
 
             var template = new ControlTemplate(typeof(MenuItem))
@@ -124,18 +187,36 @@ namespace Vim.UI.Wpf
             template.Triggers.Add(highlightTrigger);
 
             var style = new Style(typeof(MenuItem));
+            style.Setters.Add(new Setter(FrameworkElement.OverridesDefaultStyleProperty, true));
             style.Setters.Add(new Setter(Control.ForegroundProperty, foregroundBrush));
             style.Setters.Add(new Setter(Control.TemplateProperty, template));
             return style;
         }
 
+        /// <summary>
+        /// Replace the entire menu chrome so no host theming can inject visuals into
+        /// the menu
+        /// </summary>
         private static void ApplyMenuColors(ContextMenu menu, PasteHistoryMenuColors colors)
         {
-            menu.Background = CreateBrush(colors.Background);
+            var borderFactory = new FrameworkElementFactory(typeof(Border));
+            borderFactory.SetValue(Border.BackgroundProperty, CreateBrush(colors.Background));
+            borderFactory.SetValue(Border.BorderBrushProperty, CreateBrush(colors.Border));
+            borderFactory.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+            borderFactory.SetValue(Border.PaddingProperty, new Thickness(0, 2, 0, 2));
+            borderFactory.SetValue(Border.SnapsToDevicePixelsProperty, true);
+
+            var itemsFactory = new FrameworkElementFactory(typeof(ItemsPresenter));
+            borderFactory.AppendChild(itemsFactory);
+
+            var template = new ControlTemplate(typeof(ContextMenu))
+            {
+                VisualTree = borderFactory,
+            };
+
+            menu.OverridesDefaultStyle = true;
+            menu.Template = template;
             menu.Foreground = CreateBrush(colors.Foreground);
-            menu.BorderBrush = CreateBrush(colors.Border);
-            menu.BorderThickness = new Thickness(1);
-            menu.Padding = new Thickness(0, 2, 0, 2);
         }
 
         /// <summary>
@@ -156,6 +237,7 @@ namespace Vim.UI.Wpf
                 Placement = PlacementMode.Relative,
             };
 
+            var textBlockStyle = CreateTextBlockStyle();
             var itemStyle = colors != null ? CreateMenuItemStyle(colors) : null;
             if (colors != null)
             {
@@ -177,13 +259,11 @@ namespace Vim.UI.Wpf
             for (var i = 0; i < entries.Count; i++)
             {
                 var index = i;
-                var preview = CreatePreviewText(entries[i]).Replace("_", "__");
-                var accessKey = GetAccessKey(i);
-                var header = accessKey != null
-                    ? string.Format("_{0}  {1}", accessKey, preview)
-                    : preview;
-
-                var menuItem = new MenuItem { Header = header };
+                var preview = CreatePreviewText(entries[i]);
+                var menuItem = new MenuItem
+                {
+                    Header = CreateHeader(GetAccessKey(i), preview, textBlockStyle),
+                };
                 if (itemStyle != null)
                 {
                     menuItem.Style = itemStyle;
@@ -192,6 +272,19 @@ namespace Vim.UI.Wpf
                 menuItem.Click += (sender, e) => onSelected(index);
                 menu.Items.Add(menuItem);
             }
+
+            // Selection by number is handled directly instead of using access keys so
+            // that no host specific access key rendering is involved
+            menu.PreviewKeyDown += (sender, e) =>
+            {
+                var entryIndex = GetEntryIndex(e.Key);
+                if (entryIndex >= 0 && entryIndex < entries.Count)
+                {
+                    e.Handled = true;
+                    menu.IsOpen = false;
+                    onSelected(entryIndex);
+                }
+            };
 
             menu.Opened += (sender, e) =>
             {
