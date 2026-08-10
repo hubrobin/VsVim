@@ -85,12 +85,6 @@ namespace Vim.VisualStudio
         bool CleanMacros { get; set; }
 
         /// <summary>
-        /// Do we mirror text affected by yank and delete operations onto the clipboard so it
-        /// shows up in the Visual Studio clipboard ring (Ctrl+Shift+V)
-        /// </summary>
-        bool UseClipboardRing { get; set; }
-
-        /// <summary>
         /// Controls how vimrc files are loaded
         /// </summary>
         VimRcLoadSetting VimRcLoadSetting { get; set; }

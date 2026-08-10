@@ -5285,7 +5285,7 @@ type IVimHost =
 
     /// Called when a register is updated as part of a yank or delete style operation.
     /// This gives the host the opportunity to mirror the new value into host specific
-    /// storage such as the Visual Studio clipboard ring
+    /// storage such as a paste history
     abstract RegisterUpdated: registerName: RegisterName -> value: RegisterValue -> operation: RegisterOperation -> unit
 
     /// Called when an external (host initiated) selection change would cause the
