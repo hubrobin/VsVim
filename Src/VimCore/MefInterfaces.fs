@@ -281,16 +281,7 @@ type ViewFlags =
     /// Visible ||| TextExpanded ||| ScrollOffset ||| VirtualEdit
     | All = 0x0f
 
-[<RequireQualifiedAccess>]
-[<NoComparison>]
-type RegisterOperation = 
-    | Yank
-    | Delete
-
-    /// Force the operation to be treated like a big delete even if it's a small one.
-    | BigDelete
-
-/// This class abstracts out the operations that are common to normal, visual and 
+/// This class abstracts out the operations that are common to normal, visual and
 /// command mode.  It usually contains common edit and movement operations and very
 /// rarely will deal with caret operations.  That is the responsibility of the 
 /// caller

@@ -261,6 +261,11 @@ namespace Vim.VisualStudio.Implementation.OptionPages
         [Category(CategoryEditing)]
         public bool ReportClipboardErrors { get; set; }
 
+        [DisplayName("Use Clipboard Ring")]
+        [Description("Add text affected by yank and delete commands to the Visual Studio clipboard ring (Ctrl+Shift+V)")]
+        [Category(CategoryEditing)]
+        public bool UseClipboardRing { get; set; }
+
         [DisplayName("VimRc File Loading")]
         [Description("Controls how VsVim probes for vsvimrc / vimrc files")]
         [Category(CategoryGeneral)]
@@ -401,6 +406,7 @@ namespace Vim.VisualStudio.Implementation.OptionPages
                 UseEditorCommandMargin = vimApplicationSettings.UseEditorCommandMargin;
                 CleanMacros = vimApplicationSettings.CleanMacros;
                 ReportClipboardErrors = vimApplicationSettings.ReportClipboardErrors;
+                UseClipboardRing = vimApplicationSettings.UseClipboardRing;
                 VimRcLoadSetting = vimApplicationSettings.VimRcLoadSetting;
                 DisplayControlCharacters = vimApplicationSettings.DisplayControlChars;
                 DisplayVimRcLoadErrors = !vimApplicationSettings.HaveNotifiedVimRcErrors;
@@ -433,6 +439,7 @@ namespace Vim.VisualStudio.Implementation.OptionPages
                 vimApplicationSettings.UseEditorCommandMargin = UseEditorCommandMargin;
                 vimApplicationSettings.CleanMacros = CleanMacros;
                 vimApplicationSettings.ReportClipboardErrors = ReportClipboardErrors;
+                vimApplicationSettings.UseClipboardRing = UseClipboardRing;
                 vimApplicationSettings.VimRcLoadSetting = VimRcLoadSetting;
                 vimApplicationSettings.DisplayControlChars = DisplayControlCharacters;
                 vimApplicationSettings.HaveNotifiedVimRcErrors = !DisplayVimRcLoadErrors;

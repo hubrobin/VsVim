@@ -313,6 +313,53 @@ namespace Vim.UnitTest
             }
 
             /// <summary>
+            /// Yank and delete style register updates should be passed along to the host so
+            /// it can mirror the value into host specific storage like the Visual Studio
+            /// clipboard ring
+            /// </summary>
+            [WpfFact]
+            public void HostNotifiedOnYank()
+            {
+                var reg = _registerMap.GetRegister('c');
+                RegisterName seenName = null;
+                RegisterValue seenValue = null;
+                RegisterOperation seenOperation = null;
+                VimHost.RegisterUpdatedFunc = (name, value, operation) =>
+                {
+                    seenName = name;
+                    seenValue = value;
+                    seenOperation = operation;
+                };
+                _commonOperations.SetRegisterValue(reg.Name, RegisterOperation.Yank, new RegisterValue("foo bar", OperationKind.CharacterWise));
+                Assert.Equal(reg.Name, seenName);
+                Assert.Equal("foo bar", seenValue.StringValue);
+                Assert.Equal(RegisterOperation.Yank, seenOperation);
+            }
+
+            [WpfFact]
+            public void HostNotifiedOnDelete()
+            {
+                var reg = _registerMap.GetRegister('c');
+                RegisterOperation seenOperation = null;
+                VimHost.RegisterUpdatedFunc = (name, value, operation) => { seenOperation = operation; };
+                _commonOperations.SetRegisterValue(reg.Name, RegisterOperation.Delete, new RegisterValue("foo bar\n", OperationKind.CharacterWise));
+                Assert.Equal(RegisterOperation.Delete, seenOperation);
+            }
+
+            /// <summary>
+            /// The blackhole register exists specifically to avoid affecting any other
+            /// storage so the host shouldn't be notified when it's used
+            /// </summary>
+            [WpfFact]
+            public void HostNotNotifiedOnBlackhole()
+            {
+                var count = 0;
+                VimHost.RegisterUpdatedFunc = delegate { count++; };
+                _commonOperations.SetRegisterValue(RegisterName.Blackhole, RegisterOperation.Delete, new RegisterValue("foo bar", OperationKind.CharacterWise));
+                Assert.Equal(0, count);
+            }
+
+            /// <summary>
             /// Ensure the numbered registers are updated correctly for deletes
             /// </summary>
             [WpfFact]

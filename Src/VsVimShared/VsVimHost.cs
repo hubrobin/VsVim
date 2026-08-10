@@ -54,6 +54,7 @@ namespace Vim.VisualStudio
             private const string UseEditorCommandMarginName = "vsvim_useeditorcommandmargin";
             private const string CleanMacrosName = "vsvim_cleanmacros";
             private const string HideMarksName = "vsvim_hidemarks";
+            private const string UseClipboardRingName = "vsvim_clipboardring";
 
             private readonly IVimApplicationSettings _vimApplicationSettings;
 
@@ -71,6 +72,7 @@ namespace Vim.VisualStudio
                 globalSettings.AddCustomSetting(UseEditorCommandMarginName, UseEditorCommandMarginName, settingsSource);
                 globalSettings.AddCustomSetting(CleanMacrosName, CleanMacrosName, settingsSource);
                 globalSettings.AddCustomSetting(HideMarksName, HideMarksName, settingsSource);
+                globalSettings.AddCustomSetting(UseClipboardRingName, UseClipboardRingName, settingsSource);
             }
 
             SettingValue IVimCustomSettingSource.GetDefaultSettingValue(string name)
@@ -83,6 +85,8 @@ namespace Vim.VisualStudio
                     case UseEditorCommandMarginName:
                     case CleanMacrosName:
                         return SettingValue.NewToggle(false);
+                    case UseClipboardRingName:
+                        return SettingValue.NewToggle(true);
                     case HideMarksName:
                         return SettingValue.NewString("");
                     default:
@@ -105,6 +109,8 @@ namespace Vim.VisualStudio
                         return SettingValue.NewToggle(_vimApplicationSettings.UseEditorCommandMargin);
                     case CleanMacrosName:
                         return SettingValue.NewToggle(_vimApplicationSettings.CleanMacros);
+                    case UseClipboardRingName:
+                        return SettingValue.NewToggle(_vimApplicationSettings.UseClipboardRing);
                     case HideMarksName:
                         return SettingValue.NewString(_vimApplicationSettings.HideMarks);
                     default:
@@ -153,6 +159,9 @@ namespace Vim.VisualStudio
                         break;
                     case CleanMacrosName:
                         setBool(v => _vimApplicationSettings.CleanMacros = v);
+                        break;
+                    case UseClipboardRingName:
+                        setBool(v => _vimApplicationSettings.UseClipboardRing = v);
                         break;
                     case HideMarksName:
                         setString(v => _vimApplicationSettings.HideMarks = v);
@@ -239,6 +248,12 @@ namespace Vim.VisualStudio
         internal const string CommandNameGoToDefinition = "Edit.GoToDefinition";
         internal const string CommandNamePeekDefinition = "Edit.PeekDefinition";
         internal const string CommandNameGoToDeclaration = "Edit.GoToDeclaration";
+
+        /// <summary>
+        /// The clipboard format the Visual Studio editor uses to tag a clipboard entry
+        /// as the result of a full line cut / copy operation
+        /// </summary>
+        internal const string LineCutCopyClipboardFormat = "VisualStudioEditorOperationsLineCutCopyClipboardTag";
 
 #if VS_SPECIFIC_2019
         internal const VisualStudioVersion VisualStudioVersion = global::Vim.VisualStudio.VisualStudioVersion.Vs2019;
@@ -734,6 +749,48 @@ namespace Vim.VisualStudio
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// Mirror the value of a yank / delete style register update onto the Windows
+        /// clipboard so it shows up in the Visual Studio clipboard ring (Ctrl+Shift+V)
+        /// </summary>
+        public override void RegisterUpdated(RegisterName registerName, RegisterValue value, RegisterOperation operation)
+        {
+            if (!_vimApplicationSettings.UseClipboardRing)
+            {
+                return;
+            }
+
+            var text = value.StringValue;
+            if (string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+
+            try
+            {
+                var dataObject = new DataObject();
+                dataObject.SetText(text);
+                if (value.OperationKind.IsLineWise)
+                {
+                    // This is the format the Visual Studio editor uses to mark a clipboard
+                    // entry as a full line copy so that it pastes as a complete line
+                    dataObject.SetData(LineCutCopyClipboardFormat, true);
+                }
+
+                // Visual Studio only records clipboard entries in the clipboard ring when
+                // the clipboard change is owned by the Visual Studio process.  Setting the
+                // data object without flushing (copy: false) keeps this process as the
+                // clipboard owner which is exactly how the Visual Studio editor publishes
+                // its own cut / copy operations
+                Clipboard.SetDataObject(dataObject, copy: false);
+            }
+            catch (Exception)
+            {
+                // The clipboard is a shared resource and access can fail sporadically.
+                // Updating the clipboard ring is a best effort operation
+            }
         }
 
         public override int GetTabIndex(ITextView textView)

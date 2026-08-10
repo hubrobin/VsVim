@@ -2411,10 +2411,15 @@ type internal CommonOperations
                 if not hasNewLine && name = RegisterName.Unnamed then
                     _registerMap.SetRegisterValue RegisterName.SmallDelete value
             | RegisterOperation.Yank ->
-                // If the register name was missing or explicitly the unnamed register then it needs 
+                // If the register name was missing or explicitly the unnamed register then it needs
                 // to update register 0.
                 if isUnnamedOrMissing then
                     _registerMap.SetRegisterValue (RegisterName.Numbered NumberedRegister.Number0) value
+
+            // Let the host know a register was updated by a yank / delete operation.  Hosts
+            // use this to mirror the value into host specific storage like the Visual
+            // Studio clipboard ring
+            _vimHost.RegisterUpdated name value operation
 
     /// Toggle the use of typing language characters for insert or search
     /// (see vim ':help i_CTRL-^' and ':help c_CTRL-^')

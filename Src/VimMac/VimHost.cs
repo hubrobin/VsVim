@@ -731,6 +731,10 @@ namespace Vim.Mac
             return false;
         }
 
+        public void RegisterUpdated(RegisterName registerName, RegisterValue value, RegisterOperation operation)
+        {
+        }
+
         public void VimCreated(IVim vim)
         {
             _vim = vim;

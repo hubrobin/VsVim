@@ -31,6 +31,7 @@ namespace Vim.VisualStudio.Implementation.Settings
         internal const string UseEditorTabAndBackspaceName = "UseEditorTabAndBackspace";
         internal const string UseEditorCommandMarginName = "UseEditorCommandMargin";
         internal const string CleanMacrosName = "CleanMacros";
+        internal const string UseClipboardRingName = "UseClipboardRing";
         internal const string ReportClipboardErrorsName = "ReportClipboardErrors";
         internal const string LastVersionUsedName = "LastVersionUsed";
         internal const string WordWrapDisplayName = "WordWrapDisplay";
@@ -175,6 +176,12 @@ namespace Vim.VisualStudio.Implementation.Settings
         {
             get { return GetBoolean(CleanMacrosName, defaultValue: false); }
             set { SetBoolean(CleanMacrosName, value); }
+        }
+
+        bool IVimApplicationSettings.UseClipboardRing
+        {
+            get { return GetBoolean(UseClipboardRingName, defaultValue: true); }
+            set { SetBoolean(UseClipboardRingName, value); }
         }
 
         bool IVimApplicationSettings.HaveUpdatedKeyBindings

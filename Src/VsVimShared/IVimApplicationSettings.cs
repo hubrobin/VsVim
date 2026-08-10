@@ -80,9 +80,15 @@ namespace Vim.VisualStudio
         bool UseEditorCommandMargin { get; set; }
 
         /// <summary>
-        /// Do we keep macro recording clean by disabling intellisense, auto formatting, etc ... 
+        /// Do we keep macro recording clean by disabling intellisense, auto formatting, etc ...
         /// </summary>
         bool CleanMacros { get; set; }
+
+        /// <summary>
+        /// Do we mirror text affected by yank and delete operations onto the clipboard so it
+        /// shows up in the Visual Studio clipboard ring (Ctrl+Shift+V)
+        /// </summary>
+        bool UseClipboardRing { get; set; }
 
         /// <summary>
         /// Controls how vimrc files are loaded
