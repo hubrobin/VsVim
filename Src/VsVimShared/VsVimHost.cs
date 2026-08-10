@@ -815,12 +815,12 @@ namespace Vim.VisualStudio
                     dataObject.SetData(LineCutCopyClipboardFormat, true);
                 }
 
-                // Visual Studio only records clipboard entries in the clipboard ring when
-                // the clipboard change is owned by the Visual Studio process.  Setting the
-                // data object without flushing (copy: false) keeps this process as the
-                // clipboard owner which is exactly how the Visual Studio editor publishes
-                // its own cut / copy operations
-                Clipboard.SetDataObject(dataObject, copy: false);
+                // Flush the data to the clipboard (copy: true). Clipboard history
+                // mechanisms (e.g. the Windows clipboard history which backs paste
+                // history UIs) cannot record delayed rendered clipboard data, so an
+                // unflushed data object would never show up in them. Flushing also
+                // keeps the yanked text available after Visual Studio exits
+                Clipboard.SetDataObject(dataObject, copy: true);
             }
             catch (Exception)
             {
