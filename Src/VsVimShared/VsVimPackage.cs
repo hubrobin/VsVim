@@ -4,6 +4,7 @@ using Microsoft.VisualStudio.ComponentModelHost;
 using Microsoft.VisualStudio.OLE.Interop;
 using Microsoft.VisualStudio.Shell;
 using Microsoft.VisualStudio.Shell.Interop;
+using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.Win32;
 using System;
@@ -251,9 +252,10 @@ namespace Vim.VisualStudio
         }
 
         /// <summary>
-        /// Paste the chosen history entry into the buffer.  Character wise values are
-        /// inserted at the caret while line wise values are inserted as complete lines
-        /// above the caret line, matching the behavior of a vim 'P' style put
+        /// Paste the chosen history entry into the buffer, matching the behavior of a
+        /// vim 'p' style put: character wise values are inserted after the character
+        /// under the caret while line wise values are inserted as complete lines below
+        /// the caret line
         /// </summary>
         private void PasteHistoryEntry(IVimBuffer vimBuffer, RegisterValue value)
         {
@@ -262,9 +264,21 @@ namespace Vim.VisualStudio
                 var commonOperationsFactory = _exportProvider.GetExportedValue<ICommonOperationsFactory>();
                 var commonOperations = commonOperationsFactory.GetCommonOperations(vimBuffer.VimBufferData);
                 var caretPoint = vimBuffer.TextView.Caret.Position.BufferPosition;
-                var point = value.OperationKind.IsLineWise
-                    ? caretPoint.GetContainingLine().Start
-                    : caretPoint;
+                var caretLine = caretPoint.GetContainingLine();
+                SnapshotPoint point;
+                if (value.OperationKind.IsLineWise)
+                {
+                    point = caretLine.EndIncludingLineBreak;
+                }
+                else
+                {
+                    // Like 'p' the text goes after the character under the caret unless
+                    // the line is empty or the caret is at the end of the line
+                    point = caretPoint.Position < caretLine.End.Position
+                        ? caretPoint.Add(1)
+                        : caretPoint;
+                }
+
                 commonOperations.Put(point, value.StringData, value.OperationKind);
             }
             catch (Exception ex)
