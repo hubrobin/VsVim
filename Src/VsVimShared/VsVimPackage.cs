@@ -247,8 +247,40 @@ namespace Vim.VisualStudio
             PasteHistoryMenu.Show(
                 textView,
                 entries,
-                index => PasteHistoryEntry(vimBuffer, history[index]));
+                index => PasteHistoryEntry(vimBuffer, history[index]),
+                TryCreatePasteHistoryMenuColors());
             return VSConstants.S_OK;
+        }
+
+        /// <summary>
+        /// Get the current Visual Studio theme colors used to draw the paste history
+        /// menu.  Resolved on every invocation so theme changes are respected
+        /// </summary>
+        private static PasteHistoryMenuColors TryCreatePasteHistoryMenuColors()
+        {
+            try
+            {
+                System.Windows.Media.Color Convert(Microsoft.VisualStudio.Shell.ThemeResourceKey key)
+                {
+                    var color = Microsoft.VisualStudio.PlatformUI.VSColorTheme.GetThemedColor(key);
+                    return System.Windows.Media.Color.FromArgb(color.A, color.R, color.G, color.B);
+                }
+
+                return new PasteHistoryMenuColors
+                {
+                    Background = Convert(Microsoft.VisualStudio.PlatformUI.EnvironmentColors.CommandBarMenuBackgroundGradientBeginColorKey),
+                    Foreground = Convert(Microsoft.VisualStudio.PlatformUI.EnvironmentColors.CommandBarTextActiveColorKey),
+                    Border = Convert(Microsoft.VisualStudio.PlatformUI.EnvironmentColors.CommandBarMenuBorderColorKey),
+                    HighlightBackground = Convert(Microsoft.VisualStudio.PlatformUI.EnvironmentColors.CommandBarMenuItemMouseOverColorKey),
+                    HighlightForeground = Convert(Microsoft.VisualStudio.PlatformUI.EnvironmentColors.CommandBarTextHoverColorKey),
+                };
+            }
+            catch
+            {
+                // If the theme service isn't available fall back to the default menu
+                // appearance
+                return null;
+            }
         }
 
         /// <summary>

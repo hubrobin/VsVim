@@ -2417,8 +2417,8 @@ type internal CommonOperations
                     _registerMap.SetRegisterValue (RegisterName.Numbered NumberedRegister.Number0) value
 
             // Let the host know a register was updated by a yank / delete operation.  Hosts
-            // use this to mirror the value into host specific storage like the Visual
-            // Studio clipboard ring
+            // use this to mirror the value into host specific storage like a paste
+            // history
             _vimHost.RegisterUpdated name value operation
 
     /// Toggle the use of typing language characters for insert or search
