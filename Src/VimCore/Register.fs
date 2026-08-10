@@ -540,6 +540,18 @@ type RegisterValue
 
     override x.ToString() = x.StringValue
 
+/// The type of operation which produced a register value.  This is used to alter
+/// the behavior of the update (which other registers are affected) and is passed
+/// along to the host when a register is updated
+[<RequireQualifiedAccess>]
+[<NoComparison>]
+type RegisterOperation =
+    | Yank
+    | Delete
+
+    /// Force the operation to be treated like a big delete even if it's a small one.
+    | BigDelete
+
 /// Backing of a register value
 type internal IRegisterValueBacking = 
 

@@ -495,6 +495,14 @@ namespace Vim.UI.Wpf
             return false;
         }
 
+        /// <summary>
+        /// Mirroring register updates into host specific storage is a host specific
+        /// operation.  By default nothing is done
+        /// </summary>
+        public virtual void RegisterUpdated(RegisterName registerName, RegisterValue value, RegisterOperation operation)
+        {
+        }
+
         protected void RaiseIsVisibleChanged(ITextView textView)
         {
             if (_isVisibleChanged != null)
@@ -899,6 +907,11 @@ namespace Vim.UI.Wpf
         void IVimHost.VimRcLoaded(VimRcState vimRcState, IVimLocalSettings localSettings, IVimWindowSettings windowSettings)
         {
             VimRcLoaded(vimRcState, localSettings, windowSettings);
+        }
+
+        void IVimHost.RegisterUpdated(RegisterName registerName, RegisterValue value, RegisterOperation operation)
+        {
+            RegisterUpdated(registerName, value, operation);
         }
 
         event EventHandler<TextViewEventArgs> IVimHost.IsVisibleChanged

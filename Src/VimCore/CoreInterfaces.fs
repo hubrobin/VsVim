@@ -5279,9 +5279,14 @@ type IVimHost =
     abstract VimRcLoaded: vimRcState: VimRcState -> localSettings: IVimLocalSettings -> windowSettings: IVimWindowSettings -> unit
 
     /// Allow the host to custom process the insert command.  Hosts often have
-    /// special non-vim semantics for certain types of edits (Enter for 
+    /// special non-vim semantics for certain types of edits (Enter for
     /// example).  This override allows them to do this processing
     abstract TryCustomProcess: textView: ITextView -> command: InsertCommand -> bool
+
+    /// Called when a register is updated as part of a yank or delete style operation.
+    /// This gives the host the opportunity to mirror the new value into host specific
+    /// storage such as the Visual Studio clipboard ring
+    abstract RegisterUpdated: registerName: RegisterName -> value: RegisterValue -> operation: RegisterOperation -> unit
 
     /// Raised when the visibility of an ITextView changes
     [<CLIEvent>]
