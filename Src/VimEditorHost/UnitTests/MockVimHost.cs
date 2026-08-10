@@ -46,6 +46,7 @@ namespace Vim.UnitTest
         public bool? IsTextViewVisible { get; set; }
         public Func<ITextView, InsertCommand, bool> TryCustomProcessFunc { get; set; }
         public Action<RegisterName, RegisterValue, RegisterOperation> RegisterUpdatedFunc { get; set; }
+        public Func<ITextView, bool> IsUnwantedExternalSelectionFunc { get; set; }
         public Func<ITextView> CreateHiddenTextViewFunc { get; set; }
         public Func<ITextBuffer, bool> IsDirtyFunc { get; set; }
         public Action<FSharpFunc<Unit, Unit>, ITextView> DoActionWhenTextViewReadyFunc { get; set; }
@@ -129,6 +130,7 @@ namespace Vim.UnitTest
             SplitViewHorizontallyFunc = delegate { throw new NotImplementedException(); };
             TryCustomProcessFunc = null;
             RegisterUpdatedFunc = null;
+            IsUnwantedExternalSelectionFunc = null;
             UseDefaultCaret = false;
             WordWrapStyle = WordWrapStyles.WordWrap;
             _isVisibleChanged = null;
@@ -368,6 +370,11 @@ namespace Vim.UnitTest
         void IVimHost.RegisterUpdated(RegisterName registerName, RegisterValue value, RegisterOperation operation)
         {
             RegisterUpdatedFunc?.Invoke(registerName, value, operation);
+        }
+
+        bool IVimHost.IsUnwantedExternalSelection(ITextView textView)
+        {
+            return IsUnwantedExternalSelectionFunc?.Invoke(textView) ?? false;
         }
 
         event EventHandler<TextViewEventArgs> IVimHost.IsVisibleChanged

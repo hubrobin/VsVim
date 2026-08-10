@@ -300,5 +300,53 @@ namespace Vim.UnitTest
             _selection.Raise(x => x.SelectionChanged += null, (object)null, EventArgs.Empty);
             Assert.True(_context.IsEmpty);
         }
+
+        /// <summary>
+        /// An external selection which the host labels as unwanted (e.g. the selection of the
+        /// target symbol which "Go To Definition" produces) should be cleared instead of
+        /// causing a switch into visual mode
+        /// </summary>
+        [Fact]
+        public void UnwantedExternalSelectionIsCleared()
+        {
+            _vimBuffer.SetupGet(x => x.IsProcessingInput).Returns(false).Verifiable();
+            _vimBuffer.SetupGet(x => x.ModeKind).Returns(ModeKind.Normal).Verifiable();
+            _selection.SetupGet(x => x.IsEmpty).Returns(false).Verifiable();
+            _selection.SetupGet(x => x.StreamSelectionSpan).Returns(_nonEmptySpan).Verifiable();
+            _vimHost.Setup(x => x.IsUnwantedExternalSelection(_textView.Object)).Returns(true).Verifiable();
+            _vimBuffer
+                .Setup(x => x.SwitchMode(It.IsAny<ModeKind>(), It.IsAny<ModeArgument>()))
+                .Throws(new Exception());
+            _selection.Setup(x => x.Clear()).Verifiable();
+            _selection.Raise(x => x.SelectionChanged += null, null, EventArgs.Empty);
+            Assert.False(_context.IsEmpty);
+            _context.RunAll();
+            _factory.Verify();
+        }
+
+        /// <summary>
+        /// A selection made while the mouse button is pressed is a user selection and should
+        /// switch to visual mode even when the host would label an external selection as
+        /// unwanted
+        /// </summary>
+        [Fact]
+        public void MouseSelectionIsNotUnwanted()
+        {
+            _vimBuffer.SetupGet(x => x.IsProcessingInput).Returns(false).Verifiable();
+            _vimBuffer.SetupGet(x => x.ModeKind).Returns(ModeKind.Normal).Verifiable();
+            _selection.SetupGet(x => x.IsEmpty).Returns(false).Verifiable();
+            _selection.SetupGet(x => x.StreamSelectionSpan).Returns(_nonEmptySpan).Verifiable();
+            _selection.SetupGet(x => x.Mode).Returns(TextSelectionMode.Stream);
+            _mouseDevice.SetupGet(x => x.IsLeftButtonPressed).Returns(true);
+            _vimHost.Setup(x => x.IsUnwantedExternalSelection(_textView.Object)).Returns(true);
+            _vimBuffer
+                .Setup(x => x.SwitchMode(ModeKind.VisualCharacter, ModeArgument.None))
+                .Returns(_factory.Create<IMode>().Object)
+                .Verifiable();
+            _selection.Raise(x => x.SelectionChanged += null, null, EventArgs.Empty);
+            Assert.False(_context.IsEmpty);
+            _context.RunAll();
+            _factory.Verify();
+        }
     }
 }

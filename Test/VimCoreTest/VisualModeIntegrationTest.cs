@@ -111,6 +111,53 @@ namespace Vim.UnitTest
             _vimBuffer.SwitchMode(ModeKind.VisualBlock, ModeArgument.None);
         }
 
+        public sealed class UnwantedSelectionTest : VisualModeIntegrationTest
+        {
+            /// <summary>
+            /// An external selection normally causes a switch into visual mode
+            /// </summary>
+            [WpfFact]
+            public void NormalExternalSelection()
+            {
+                Create("cat dog bear");
+                _textView.Selection.Select(new SnapshotSpan(_textView.GetPoint(4), 3), isReversed: false);
+                DoEvents();
+                Assert.Equal(ModeKind.VisualCharacter, _vimBuffer.ModeKind);
+            }
+
+            /// <summary>
+            /// An external selection which the host labels as unwanted (e.g. the selection
+            /// of the target symbol which "Go To Definition" produces) should be cleared
+            /// instead of causing a switch into visual mode
+            /// </summary>
+            [WpfFact]
+            public void UnwantedExternalSelection()
+            {
+                Create("cat dog bear");
+                _vimHost.IsUnwantedExternalSelectionFunc = _ => true;
+                _textView.Selection.Select(new SnapshotSpan(_textView.GetPoint(4), 3), isReversed: false);
+                DoEvents();
+                Assert.Equal(ModeKind.Normal, _vimBuffer.ModeKind);
+                Assert.True(_textView.Selection.IsEmpty);
+                Assert.Equal(4, _textView.GetCaretPoint().Position);
+            }
+
+            /// <summary>
+            /// A selection made while the left mouse button is pressed is a user selection
+            /// and should still switch into visual mode
+            /// </summary>
+            [WpfFact]
+            public void MouseSelectionIsNotUnwanted()
+            {
+                Create("cat dog bear");
+                _vimHost.IsUnwantedExternalSelectionFunc = _ => true;
+                _testableMouseDevice.IsLeftButtonPressed = true;
+                _textView.Selection.Select(new SnapshotSpan(_textView.GetPoint(4), 3), isReversed: false);
+                DoEvents();
+                Assert.Equal(ModeKind.VisualCharacter, _vimBuffer.ModeKind);
+            }
+        }
+
         public sealed class LeftMouseTest : VisualModeIntegrationTest
         {
             [WpfFact]
