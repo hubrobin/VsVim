@@ -285,9 +285,10 @@ namespace Vim.VisualStudio
 
         /// <summary>
         /// Paste the chosen history entry into the buffer, matching the behavior of a
-        /// vim 'p' style put: character wise values are inserted after the character
-        /// under the caret while line wise values are inserted as complete lines below
-        /// the caret line
+        /// vim 'p' style put.  With an active selection the pasted value replaces the
+        /// selection like a visual mode 'p'.  Otherwise character wise values are
+        /// inserted after the character under the caret while line wise values are
+        /// inserted as complete lines below the caret line
         /// </summary>
         private void PasteHistoryEntry(IVimBuffer vimBuffer, RegisterValue value)
         {
@@ -295,23 +296,56 @@ namespace Vim.VisualStudio
             {
                 var commonOperationsFactory = _exportProvider.GetExportedValue<ICommonOperationsFactory>();
                 var commonOperations = commonOperationsFactory.GetCommonOperations(vimBuffer.VimBufferData);
-                var caretPoint = vimBuffer.TextView.Caret.Position.BufferPosition;
-                var caretLine = caretPoint.GetContainingLine();
-                SnapshotPoint point;
-                if (value.OperationKind.IsLineWise)
-                {
-                    point = caretLine.EndIncludingLineBreak;
-                }
-                else
-                {
-                    // Like 'p' the text goes after the character under the caret unless
-                    // the line is empty or the caret is at the end of the line
-                    point = caretPoint.Position < caretLine.End.Position
-                        ? caretPoint.Add(1)
-                        : caretPoint;
-                }
+                var textView = vimBuffer.TextView;
+                var undoRedoOperations = vimBuffer.VimBufferData.UndoRedoOperations;
 
-                commonOperations.Put(point, value.StringData, value.OperationKind);
+                using (var transaction = undoRedoOperations.CreateTextViewUndoTransaction("Paste History", textView))
+                {
+                    transaction.AddBeforeTextBufferChangePrimitive();
+
+                    if (!textView.Selection.IsEmpty && textView.Selection.Mode == TextSelectionMode.Stream)
+                    {
+                        // An active selection is replaced by the pasted value, like a
+                        // visual mode 'p'
+                        var span = textView.Selection.StreamSelectionSpan.SnapshotSpan;
+                        textView.Selection.Clear();
+                        var snapshot = textView.TextBuffer.Delete(span.Span);
+                        var startPoint = new SnapshotPoint(snapshot, span.Start.Position);
+                        textView.Caret.MoveTo(startPoint);
+                        commonOperations.Put(startPoint, value.StringData, value.OperationKind);
+
+                        // The selection is gone so make sure the buffer ends up back in
+                        // normal mode
+                        if (vimBuffer.ModeKind.IsAnyVisual() || vimBuffer.ModeKind.IsAnySelect())
+                        {
+                            vimBuffer.SwitchMode(ModeKind.Normal, ModeArgument.None);
+                        }
+                    }
+                    else
+                    {
+                        var caretPoint = textView.Caret.Position.BufferPosition;
+                        var caretLine = caretPoint.GetContainingLine();
+                        SnapshotPoint point;
+                        if (value.OperationKind.IsLineWise)
+                        {
+                            point = caretLine.EndIncludingLineBreak;
+                        }
+                        else
+                        {
+                            // Like 'p' the text goes after the character under the caret
+                            // unless the line is empty or the caret is at the end of the
+                            // line
+                            point = caretPoint.Position < caretLine.End.Position
+                                ? caretPoint.Add(1)
+                                : caretPoint;
+                        }
+
+                        commonOperations.Put(point, value.StringData, value.OperationKind);
+                    }
+
+                    transaction.AddAfterTextBufferChangePrimitive();
+                    transaction.Complete();
+                }
             }
             catch (Exception ex)
             {
