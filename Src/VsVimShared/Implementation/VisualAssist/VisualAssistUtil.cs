@@ -47,8 +47,7 @@ namespace Vim.VisualStudio.Implementation.VisualAssist
             _isVisualAssistInstalled = vsShell.IsPackageInstalled(s_visualAssistPackageId);
             if (_isVisualAssistInstalled)
             {
-                var dte = serviceProvider.GetService<SDTE, _DTE>();
-                _isRegistryFixedNeeded = !CheckRegistryKey(VsVimHost.VisualStudioVersion);
+                _isRegistryFixedNeeded = !CheckRegistryKeys();
             }
             else
             {
@@ -57,37 +56,44 @@ namespace Vim.VisualStudio.Implementation.VisualAssist
             }
         }
 
-        private static string GetRegistryKeyName(VisualStudioVersion version)
-        {
-            string subKey;
-            switch (version)
-            {
-                case VisualStudioVersion.Vs2019:
-                    subKey = "VANet16";
-                    break;
-                default:
-                    // Default to the latest version
-                    subKey = "VANet16";
-                    break;
-            }
-
-            return RegistryBaseKeyName + subKey;
-        }
-
-        private static bool CheckRegistryKey(VisualStudioVersion version)
+        /// <summary>
+        /// Check the 'TrackCaretVisibility' value of every installed Visual Assist
+        /// version.  This is the Visual Assist setting which makes it stand down when
+        /// the caret is hidden, which is how it detects that VsVim is in a mode like
+        /// normal or command where its intellisense shouldn't be displayed.  The
+        /// version specific sub key names (VANet16, VANet17, VANet18, ...) vary per
+        /// Visual Studio version so simply check them all instead of hard coding one
+        /// </summary>
+        private static bool CheckRegistryKeys()
         {
             try
             {
-                var keyName = GetRegistryKeyName(version);
-                using (var key = Registry.CurrentUser.OpenSubKey(keyName))
+                using (var baseKey = Registry.CurrentUser.OpenSubKey(RegistryBaseKeyName.TrimEnd('\\')))
                 {
-                    var value = (byte[])key.GetValue(RegistryValueName);
-                    return value.Length > 0 && value[0] != 0;
+                    if (baseKey == null)
+                    {
+                        return true;
+                    }
+
+                    foreach (var subKeyName in baseKey.GetSubKeyNames())
+                    {
+                        using (var key = baseKey.OpenSubKey(subKeyName))
+                        {
+                            if (key != null &&
+                                key.GetValue(RegistryValueName) is byte[] value &&
+                                (value.Length == 0 || value[0] == 0))
+                            {
+                                return false;
+                            }
+                        }
+                    }
                 }
+
+                // If the registry entry doesn't exist then it's properly set
+                return true;
             }
             catch
             {
-                // If the registry entry doesn't exist then it's properly set
                 return true;
             }
         }
