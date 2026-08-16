@@ -45,6 +45,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Implementation\Misc\ExtensionAdapterBroker.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Implementation\Misc\FallbackKeyProcessor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Implementation\Misc\FallbackKeyProcessorProvider.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Implementation\Misc\InsertModeExitDismisser.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Implementation\Misc\KeyBindingService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Implementation\Misc\KeyMappingCompletionGuard.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Implementation\Misc\NavigationCommandGuard.cs" />
