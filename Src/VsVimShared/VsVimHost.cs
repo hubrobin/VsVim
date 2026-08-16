@@ -256,6 +256,18 @@ namespace Vim.VisualStudio
         /// </summary>
         private static readonly TimeSpan s_unwantedSelectionWindow = TimeSpan.FromSeconds(4);
 
+        /// <summary>
+        /// The window of time after a window frame activation in which an external
+        /// selection change is considered the side effect of a navigation.  Navigation
+        /// features which move to another window (Go To Definition, Ctrl+Click,
+        /// CodeLens, Find All References, etc ...) activate the window first and select
+        /// the navigation target almost immediately afterwards, while a user initiated
+        /// non-mouse selection this quickly after a window change is very unlikely.
+        /// This catches navigations which don't flow through any command path VsVim
+        /// can observe
+        /// </summary>
+        private static readonly TimeSpan s_windowActivationSelectionWindow = TimeSpan.FromMilliseconds(1000);
+
 #if VS_SPECIFIC_2019
         internal const VisualStudioVersion VisualStudioVersion = global::Vim.VisualStudio.VisualStudioVersion.Vs2019;
 #elif VS_SPECIFIC_2022
@@ -284,6 +296,7 @@ namespace Vim.VisualStudio
         private IVim _vim;
         private FindEvents _findEvents;
         private DateTime _lastNavigationCommandTimeUtc = DateTime.MinValue;
+        private DateTime _lastWindowFrameActivationTimeUtc = DateTime.MinValue;
         private readonly List<RegisterValue> _registerHistory = new List<RegisterValue>();
 
         /// <summary>
@@ -602,13 +615,20 @@ namespace Vim.VisualStudio
         /// Navigation commands like "Go To Definition" select the target symbol when
         /// they complete.  Vim does not select the navigation target and leaving the
         /// selection in place would cause a switch into visual mode.  Label selections
-        /// which occur shortly after a navigation command as unwanted so they get
-        /// cleared instead
+        /// which occur shortly after a navigation command or a window activation as
+        /// unwanted so they get cleared instead
         /// </summary>
         public override bool IsUnwantedExternalSelection(ITextView textView)
         {
-            var sinceNavigation = DateTime.UtcNow - _lastNavigationCommandTimeUtc;
-            return sinceNavigation >= TimeSpan.Zero && sinceNavigation <= s_unwantedSelectionWindow;
+            bool isWithin(DateTime timeUtc, TimeSpan window)
+            {
+                var since = DateTime.UtcNow - timeUtc;
+                return since >= TimeSpan.Zero && since <= window;
+            }
+
+            return
+                isWithin(_lastNavigationCommandTimeUtc, s_unwantedSelectionWindow) ||
+                isWithin(_lastWindowFrameActivationTimeUtc, s_windowActivationSelectionWindow);
         }
 
         /// <summary>
@@ -1605,6 +1625,12 @@ namespace Vim.VisualStudio
                 {
                     newView = getTextView(value);
                 }
+
+                // Track when the active window changes.  Selections which appear
+                // immediately after a window activation are a strong signal of a
+                // navigation (e.g. Go To Definition into another file) selecting its
+                // target
+                _lastWindowFrameActivationTimeUtc = DateTime.UtcNow;
 
                 RaiseActiveTextViewChanged(
                     oldView == null ? FSharpOption<ITextView>.None : FSharpOption.Create<ITextView>(oldView),

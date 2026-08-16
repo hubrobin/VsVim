@@ -47,6 +47,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Implementation\Misc\FallbackKeyProcessorProvider.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Implementation\Misc\KeyBindingService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Implementation\Misc\KeyMappingCompletionGuard.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Implementation\Misc\NavigationCommandGuard.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Implementation\Misc\MindScape.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Implementation\Misc\PowerToolsUtil.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Implementation\Misc\ReportDesignerUtil.cs" />
